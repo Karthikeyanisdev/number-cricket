@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Number Cricket 🏏</title>
+<style>
+  body {
+    font-family: "Poppins", sans-serif;
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    color: #fff;
+    text-align: center;
+    padding: 25px;
+    overflow-x: hidden;
+  }
+  h1 {
+    color: #ffeb3b;
+    text-shadow: 2px 2px 5px black;
+    margin-top: 0;
+  }
+  #aboutBtn {
+    position: fixed;
+    top: 15px;
+    right: 20px;
+    background: #03a9f4;
+    border: none;
+    color: white;
+    padding: 8px 15px;
+    font-size: 14px;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  #aboutBtn:hover { background: #0288d1; }
+  .game-box {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 25px;
+    margin: 40px auto;
+    max-width: 600px;
+    box-shadow: 0 0 25px rgba(0,0,0,0.4);
+  }
+  button {
+    background: #ff9800;
+    border: none;
+    color: #fff;
+    font-size: 17px;
+    padding: 10px 15px;
+    margin: 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  button:hover { background: #f57c00; transform: scale(1.05); }
+  .scoreboard {
+    font-size: 1.1em;
+    background: #4caf50;
+    padding: 10px;
+    border-radius: 10px;
+    margin: 15px 0;
+  }
+  .numbers {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 15px;
+  }
+  .big-display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 50px;
+    margin: 20px 0;
+  }
+  .circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 40px;
+    font-weight: bold;
+    box-shadow: 0 0 20px rgba(255,255,255,0.3);
+  }
+  .user-circle { border: 3px solid #ffeb3b; }
+  .comp-circle { border: 3px solid #03a9f4; }
+
+  /* Coin */
+  .coin {
+    width: 120px;
+    height: 120px;
+    margin: 20px auto;
+    perspective: 1000px;
+  }
+  .coin-inner {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 1s;
+  }
+  .heads, .tails {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    line-height: 120px;
+    backface-visibility: hidden;
+    font-size: 22px;
+    font-weight: bold;
+  }
+  .heads { background: gold; color: black; }
+  .tails { background: silver; color: black; transform: rotateY(180deg); }
+
+  /* Popup Modal */
+  .modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    visibility: hidden;
+    opacity: 0;
+    transition: 0.3s;
+  }
+  .modal.show { visibility: visible; opacity: 1; }
+  .modal-content {
+    background: #2e3b4e;
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    max-width: 420px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.6);
+  }
+  .log-box {
+    text-align: left;
+    max-height: 180px;
+    overflow-y: auto;
+    background: rgba(255,255,255,0.1);
+    padding: 10px;
+    border-radius: 10px;
+    font-family: monospace;
+    margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+
+<button id="aboutBtn" onclick="showAbout()">About Us</button>
+
+<h1>🏏 Number Cricket 🏏</h1>
+<div class="game-box">
+  <div id="stage"></div>
+
+  <div class="big-display">
+    <div class="circle user-circle" id="userNum">–</div>
+    <div class="circle comp-circle" id="compNum">–</div>
+  </div>
+
+  <div class="scoreboard" id="score">Your Score: 0 | Computer Score: 0</div>
+
+  <div class="numbers" id="numberButtons"></div>
+</div>
+
+<!-- Game Result Popup -->
+<div class="modal" id="popup">
+  <div class="modal-content">
+    <h2 id="popupTitle"></h2>
+    <p id="popupText"></p>
+    <div class="log-box" id="logBox"></div>
+    <button onclick="location.reload()">🔁 Rematch</button>
+  </div>
+</div>
+
+<!-- About Popup -->
+<div class="modal" id="aboutPopup">
+  <div class="modal-content">
+    <h2>About Us</h2>
+    <p>Made with ❤️ by <b>D. Karthikeyan</b><br>🇮🇳 India</p>
+    <button onclick="closeAbout()">Close</button>
+  </div>
+</div>
+
+<script>
+let userScore = 0, compScore = 0;
+let userHistory = ["10"], compHistory = ["10"];
+let batting = false, bowling = false;
+let userInningsDone = false, compInningsDone = false;
+let firstInningsScore = 0;
+let gameStage = "toss";
+let log = [];
+
+const score = document.getElementById("score");
+const stage = document.getElementById("stage");
+const userNum = document.getElementById("userNum");
+const compNum = document.getElementById("compNum");
+const numberButtons = document.getElementById("numberButtons");
+const popup = document.getElementById("popup");
+const popupTitle = document.getElementById("popupTitle");
+const popupText = document.getElementById("popupText");
+const logBox = document.getElementById("logBox");
+const aboutPopup = document.getElementById("aboutPopup");
+
+// ===== Utility functions =====
+function updateScore() {
+  score.textContent = `Your Score: ${userScore} | Computer Score: ${compScore}`;
+}
+function randomInt(max) {
+  return Math.floor(Math.random() * (max + 1));
+}
+function mostFrequent(arr) {
+  return arr.sort((a,b)=>
+    arr.filter(v => v===a).length - arr.filter(v => v===b).length
+  ).pop();
+}
+function bumrah(k) {
+  let a = String(randomInt(10));
+  let b = mostFrequent(k);
+  return randomInt(1) ? b : a;
+}
+function dhoni(k) {
+  while(true) {
+    let a = String(randomInt(10));
+    let b = mostFrequent(k);
+    if(a!==b) return a;
+  }
+}
+
+// ===== Game flow =====
+function startToss() {
+  stage.innerHTML = `
+    <p>Choose Heads or Tails for toss:</p>
+    <div class="coin" id="coin">
+      <div class="coin-inner" id="coinInner">
+        <div class="heads">HEADS</div>
+        <div class="tails">TAILS</div>
+      </div>
+    </div>
+    <button onclick="flipCoin('heads')">Heads</button>
+    <button onclick="flipCoin('tails')">Tails</button>
+  `;
+}
+
+function flipCoin(choice) {
+  let coinInner = document.getElementById("coinInner");
+  let result = randomInt(1) ? "heads" : "tails";
+  let rotation = result === "heads" ? 0 : 180;
+  coinInner.style.transform = `rotateY(${rotation + 1080}deg)`;
+  setTimeout(()=>{
+    if(choice===result){
+      stage.innerHTML = `
+        <p>You won the toss! Choose to Bat or Bowl:</p>
+        <button onclick="choose('bat')">Bat</button>
+        <button onclick="choose('bowl')">Bowl</button>
+      `;
+    } else {
+      let compChoice = randomInt(1) ? "bat" : "bowl";
+      choose(compChoice, true);
+    }
+  }, 1300);
+}
+
+function choose(option, comp=false) {
+  if(option==="bat"){ batting=!comp; bowling=comp; startBatting(); }
+  else { batting=comp; bowling=!comp; startBowling(); }
+}
+
+function renderNumberButtons(action){
+  numberButtons.innerHTML = [...Array(11).keys()]
+    .map(i=>`<button onclick="${action}(${i})">${i}</button>`).join('');
+}
+
+function startBatting(){
+  gameStage="batting";
+  stage.innerHTML = `<p>You're Batting! Pick your number (0–10):</p>`;
+  renderNumberButtons("bat");
+}
+
+function startBowling(){
+  gameStage="bowling";
+  stage.innerHTML = `<p>You're Bowling! Pick your number (0–10):</p>`;
+  renderNumberButtons("bowl");
+}
+
+function bat(num){
+  let comp=parseInt(bumrah(userHistory));
+  userHistory.push(String(num));
+  userNum.textContent=num;
+  compNum.textContent=comp;
+  log.push(`You: ${num} | Computer: ${comp}`);
+
+  if(num===comp){
+    userInningsDone = true;
+    firstInningsScore = userScore;
+    if(compInningsDone) endGame();
+    else startBowling();
+  } else {
+    userScore += num===0?comp:num;
+    updateScore();
+  }
+}
+
+function bowl(num){
+  let comp=parseInt(dhoni(compHistory));
+  compHistory.push(String(comp));
+  userNum.textContent=num;
+  compNum.textContent=comp;
+  log.push(`You: ${num} | Computer: ${comp}`);
+
+  if(num===comp){
+    compInningsDone = true;
+    firstInningsScore = compScore;
+    if(userInningsDone) endGame();
+    else startBatting();
+  } else {
+    compScore += comp===0?num:comp;
+    updateScore();
+
+    // 🏁 If chasing player overtakes target → game ends instantly
+    if(userInningsDone && compScore > firstInningsScore) endGame();
+    if(compInningsDone && userScore > firstInningsScore) endGame();
+  }
+}
+
+function endGame(){
+  numberButtons.innerHTML = "";
+  let resultText="";
+  if(userScore>compScore) resultText=`🎉 You won by ${userScore-compScore} runs!`;
+  else if(compScore>userScore) resultText=`🤖 Computer won by ${compScore-userScore} runs!`;
+  else resultText="🤝 It's a Draw!";
+
+  popupTitle.textContent="🏁 Game Over!";
+  popupText.innerHTML=`Your Score: ${userScore}<br>Computer Score: ${compScore}<br><br>${resultText}`;
+  logBox.innerHTML = log.map((l,i)=>`${i+1}. ${l}`).join("<br>");
+  popup.classList.add("show");
+}
+
+// ===== About popup =====
+function showAbout(){ aboutPopup.classList.add("show"); }
+function closeAbout(){ aboutPopup.classList.remove("show"); }
+
+startToss();
+</script>
+
+</body>
+</html>
